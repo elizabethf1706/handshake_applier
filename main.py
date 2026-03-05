@@ -23,60 +23,56 @@ def save_handshake_jobs():
     time.sleep(2)
     # open handshake search
     driver.execute_script("window.location.href='https://app.joinhandshake.com/job-search?page=1&per_page=25'")    
-    time.sleep(3)
-    print("\nLog into Handshake in the browser.")
-    input("Once you are logged in and on the job search page, press ENTER here...")
+    time.sleep(1)
 
     # scroll so all jobs load
     driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-    time.sleep(2)
+    wait.until(EC.presence_of_element_located(
+    (By.CSS_SELECTOR, "div[data-hook*='job-result-card']")
+    ))
 
-    job_cards = wait.until(
-        EC.presence_of_all_elements_located(
-            (By.CSS_SELECTOR, "div[data-hook*='job-result-card']")
-    )
-)
+    job_cards = driver.find_elements(By.CSS_SELECTOR, "div[data-hook*='job-result-card']")
 
     print("Jobs found:", len(job_cards))
 
-    # for i in range(len(job_cards)):
+    for i in range(len(job_cards)):
 
-    #     try:
-    #         # refresh list because DOM changes after clicking
-    #         job_cards = driver.find_elements(By.CSS_SELECTOR, "div[data-hook*='job-result-card']")
-    #         job = job_cards[i]
+        try:
+            # refresh list because DOM changes after clicking
+            job_cards = driver.find_elements(By.CSS_SELECTOR, "div[data-hook*='job-result-card']")
+            job = job_cards[i]
 
-    #         # scroll into view
-    #         driver.execute_script("arguments[0].scrollIntoView();", job)
-    #         time.sleep(1)
+            # scroll into view
+            driver.execute_script("arguments[0].scrollIntoView();", job)
+            time.sleep(1)
 
-    #         # click the job card
-    #         job.click()
-    #         print("Opened job", i+1)
+            # click the job card
+            job.click()
+            print("Opened job", i+1)
 
-    #         time.sleep(3)
+            time.sleep(3)
 
-    #         # look for apply button text
-    #         apply_buttons = driver.find_elements(By.XPATH, "//button//span[contains(text(),'Apply')]")
+            # look for apply button text
+            apply_buttons = driver.find_elements(By.XPATH, "//button//span[contains(text(),'Apply')]")
 
-    #         if apply_buttons:
+            if apply_buttons:
 
-    #             action_text = apply_buttons[0].text.strip().lower()
+                action_text = apply_buttons[0].text.strip().lower()
 
-    #             print("Action:", action_text)
+                print("Action:", action_text)
 
-    #             if "externally" in action_text:
-    #                 print("Skipping external apply")
+                if "externally" in action_text:
+                    print("Skipping external apply")
 
-    #             else:
-    #                 save_button = driver.find_element(By.XPATH, "//button[.//span[text()='Save']]")
-    #                 save_button.click()
-    #                 print("Saved job")
+                else:
+                    save_button = driver.find_element(By.XPATH, "//button[.//span[text()='Save']]")
+                    save_button.click()
+                    print("Saved job")
 
-    #         time.sleep(2)
+            time.sleep(2)
 
-    #     except Exception as e:
-    #         print("Error with job", i+1, e)
+        except Exception as e:
+            print("Error with job", i+1, e)
 
 if __name__ == "__main__":
     save_handshake_jobs()
