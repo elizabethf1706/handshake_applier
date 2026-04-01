@@ -15,7 +15,7 @@ from ai import ai_evaluate_job
 # link for just jobs https://ucla.joinhandshake.com/job-search/10799122?jobType=9&per_page=25&page=1
  
 
-
+# works as intended i believe?
 def setup_driver():
     """Set up and return Chrome driver with options."""
     options = Options()
@@ -29,6 +29,7 @@ def setup_driver():
     wait = WebDriverWait(driver, 12)
     return driver, wait
 
+# works as intended i believe?
 def check_login(driver):
     """Check if login is required and wait for user to log in."""
     try:
@@ -53,20 +54,6 @@ def get_job_cards(driver, wait):
     print("Jobs found:", len(job_cards))
     return job_cards
 
-def click_job_card(driver, job):
-    """Click on a job card to open the job details."""
-    driver.execute_script("arguments[0].scrollIntoView();", job)
-    time.sleep(random.uniform(1, 3))
-
-    try:
-        # Find the clickable anchor link inside the job card
-        job_link = job.find_element(By.XPATH, ".//a[@role='button']")
-        driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", job_link)
-        time.sleep(0.5)
-        job_link.click()
-    except:
-        # Fallback: use JavaScript to click the job card
-        driver.execute_script("arguments[0].click();", job)
 
 def expand_description(driver):
     """Click the 'More' button to expand job description."""
@@ -107,7 +94,7 @@ def expand_description(driver):
     except Exception as expand_e:
         print(f"Could not find/click more button: {expand_e}")
         return False
-
+# works as intended i believe?
 def extract_job_details(driver):
     """Extract job title and description from the page."""
     title = ""
@@ -140,7 +127,7 @@ def extract_job_details(driver):
             pass
 
     return title, description
-
+# works as intended i believe?
 def save_job_if_worth(driver, title, description):
     """Evaluate job with AI and save if worth it."""
     print(f"Job title: {title}")
@@ -159,20 +146,7 @@ def save_job_if_worth(driver, title, description):
     else:
         print("AI says not worth saving")
 
-def process_single_job(driver, job, wait, job_index):
-    """Process a single job: click, expand, extract, evaluate, save."""
-    try:
-        click_job_card(driver, job)
-        print("Opened job", job_index + 1)
 
-        expand_description(driver)
-        title, description = extract_job_details(driver)
-        save_job_if_worth(driver, title, description)
-
-        time.sleep(random.uniform(1, 3))
-
-    except Exception as e:
-        print("Error with job", job_index + 1, e)
 
 def save_handshake_jobs():
     """Main function to scrape and save Handshake jobs."""
@@ -186,11 +160,33 @@ def save_handshake_jobs():
             check_login(driver)
             job_cards = get_job_cards(driver, wait)
 
-            for i in range(len(job_cards)):
-                # Refresh job cards list because DOM changes after clicking
-                job_cards = driver.find_elements(By.CSS_SELECTOR, "div[data-hook*='job-result-card']")
-                job = job_cards[i]
-                process_single_job(driver, job, wait, i)
+            # Collect all hrefs before clicking anything — clicking inserts
+            # extra metadata elements into the list that have no link and
+            # would throw off index-based iteration.
+            job_hrefs = []
+            for card in job_cards:
+                try:
+                    link = card.find_element(By.XPATH, ".//a[@role='button']")
+                    href = link.get_attribute("href")
+                    if href and not href.startswith("javascript"):
+                        job_hrefs.append(href)
+                except Exception:
+                    pass
+            print(f"Found {len(job_hrefs)} job links on page {page}")
+
+            for i, href in enumerate(job_hrefs):
+                try:
+                    driver.get(href)
+                    wait.until(EC.presence_of_element_located(
+                        (By.XPATH, "//h1 | //h2[@data-hook='job-title']")
+                    ))
+                    print(f"Opened job {i + 1}")
+                    expand_description(driver)
+                    title, description = extract_job_details(driver)
+                    save_job_if_worth(driver, title, description)
+                    time.sleep(random.uniform(1, 2))
+                except Exception as e:
+                    print(f"Error with job {i + 1}: {e}")
 
             print(f"page {page} has been scanned")
             page += 1
