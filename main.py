@@ -8,7 +8,7 @@ from selenium.webdriver.support import expected_conditions as EC
 import os
 import time
 import random
-from openai import OpenAI
+from openai import OpenAI, RateLimitError
 
 # 263 pages for internships
 # link for just paid internships: https://ucla.joinhandshake.com/job-search/10812441?jobType=3&pay%5BsalaryType%5D=1&per_page=25&page=1
@@ -88,24 +88,33 @@ def ai_evaluate_job(title, description):
         """
 
 
-    try:
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": "You help the user decide whether a job listing is worth saving."},
-                {"role": "user", "content": prompt},
-            ],
-            temperature=0.0,
-            max_tokens=20,
-        )
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": "You help the user decide whether a job listing is worth saving."},
+                    {"role": "user", "content": prompt},
+                ],
+                temperature=0.0,
+                max_tokens=20,
+            )
 
-        answer = response.choices[0].message.content.strip().lower()
-        print(f"AI response: {answer}")
+            answer = response.choices[0].message.content.strip().lower()
+            print(f"AI response: {answer}")
 
-        return answer.startswith("yes")
-    except Exception as e:
-        print("Error calling OpenAI API:", e)
-        return False
+            return answer.startswith("yes")
+        except RateLimitError as e:
+            if attempt < max_retries - 1:
+                print(f"Rate limit hit, attempt {attempt + 1}/{max_retries}. Waiting 60 seconds before retry...")
+                time.sleep(60)
+            else:
+                print("Rate limit hit, max retries exceeded:", e)
+                return False
+        except Exception as e:
+            print("Error calling OpenAI API:", e)
+            return False
 
 def save_handshake_jobs():
 
@@ -175,27 +184,37 @@ def save_handshake_jobs():
                 
                 try:
                     # Click the "More" button using the view-more-button class
-                    more_button = WebDriverWait(driver, 3).until(
-                        EC.element_to_be_clickable(
-                            (By.XPATH, "//button[contains(@class, 'view-more-button') and contains(text(), 'More')]")
-                        )
-                    )
-                    driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", more_button)
-                    time.sleep(0.5)
-                    print("Found 'More' button, attempting click...")
-                    
-                    # Refetch the button right before clicking to avoid stale element reference
-                    try:
-                        more_button = driver.find_element(By.XPATH, "//button[contains(@class, 'view-more-button') and contains(text(), 'More')]")
-                        more_button.click()
-                    except:
-                        # Fallback to JavaScript click
-                        driver.execute_script("arguments[0].click();", more_button)
-                    
-                    time.sleep(1)
-                    print("More button clicked successfully")
-                except Exception as expand_e:
-                    print(f"Could not find/click more button: {expand_e}")
+                    # Retry up to 3 times in case of stale element
+                    max_retries = 3
+                    for attempt in range(max_retries):
+                        try:
+                            more_button = WebDriverWait(driver, 5).until(
+                                EC.element_to_be_clickable(
+                                    (By.XPATH, "//button[contains(@class, 'view-more-button') and contains(text(), 'More')]")
+                                )
+                            )
+                            driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", more_button)
+                            time.sleep(0.5)
+                            print("Found 'More' button, attempting click...")
+                            
+                            # Use JavaScript click to avoid Selenium click issues
+                            driver.execute_script("arguments[0].click();", more_button)
+                            
+                            # Wait for the content to expand (Less button appears)
+                            time.sleep(1)
+                            WebDriverWait(driver, 3).until(
+                                EC.presence_of_element_located(
+                                    (By.XPATH, "//button[contains(@class, 'view-more-button') and contains(text(), 'Less')]")
+                                )
+                            )
+                            print("More button clicked successfully")
+                            break  # Success, exit retry loop
+                        except Exception as e:
+                            if attempt == max_retries - 1:
+                                print(f"Could not find/click more button after {max_retries} attempts: {e}")
+                            else:
+                                print(f"Attempt {attempt + 1} failed, retrying...")
+                                time.sleep(1)  # Wait before retry
                 except Exception as expand_e:
                     print(f"Could not find/click more button: {expand_e}")
            
