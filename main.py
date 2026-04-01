@@ -177,17 +177,25 @@ def save_handshake_jobs():
                     # Click the "More" button using the view-more-button class
                     more_button = WebDriverWait(driver, 3).until(
                         EC.element_to_be_clickable(
-                            (By.XPATH, "//button[contains(@class, 'view-more-button')]")
+                            (By.XPATH, "//button[contains(@class, 'view-more-button') and contains(text(), 'More')]")
                         )
                     )
                     driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", more_button)
+                    time.sleep(0.5)
                     print("Found 'More' button, attempting click...")
+                    
+                    # Refetch the button right before clicking to avoid stale element reference
                     try:
+                        more_button = driver.find_element(By.XPATH, "//button[contains(@class, 'view-more-button') and contains(text(), 'More')]")
                         more_button.click()
                     except:
+                        # Fallback to JavaScript click
                         driver.execute_script("arguments[0].click();", more_button)
+                    
                     time.sleep(1)
                     print("More button clicked successfully")
+                except Exception as expand_e:
+                    print(f"Could not find/click more button: {expand_e}")
                 except Exception as expand_e:
                     print(f"Could not find/click more button: {expand_e}")
            
@@ -203,13 +211,27 @@ def save_handshake_jobs():
                     pass
 
                 try:
-                    desc_el = driver.find_element(By.XPATH, "//div[@data-hook='job-description'] | //div[contains(@class, 'job-description')] | //div[contains(@class, 'description')]")
-                    description = desc_el.text.strip()
+                    # Find the "Less" button and get the description from its immediate parent
+                    less_button = driver.find_element(By.XPATH, "//button[contains(@class, 'view-more-button') and contains(text(), 'Less')]")
+                    # Get the immediate parent container which has the description text right above
+                    description_container = less_button.find_element(By.XPATH, "./parent::div")
+                    # Extract all text from this container
+                    full_text = description_container.text.strip()
+                    # Remove "Less" from the end
+                    if "Less" in full_text:
+                        description = full_text.replace("Less", "").strip()
+                    else:
+                        description = full_text
                 except Exception:
-                    pass
+                    # Fallback to original selectors if Less button not found
+                    try:
+                        desc_el = driver.find_element(By.XPATH, "//div[@data-hook='job-description'] | //div[contains(@class, 'job-description')] | //div[contains(@class, 'description')]")
+                        description = desc_el.text.strip()
+                    except Exception:
+                        pass
 
                 print(f"Job title: {title}")
-                print(f"Job desc length: {len(description)}")
+                print(f"Job description: {description}")
 
                 # send to AI to determine whether to save
                 worth_saving = ai_evaluate_job(title, description)
