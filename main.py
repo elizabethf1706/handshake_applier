@@ -9,8 +9,11 @@ from selenium.webdriver.support import expected_conditions as EC
 import time
 import random
 from ai import ai_evaluate_job
-
+# day 1 -- 4/1/2026 we are looking at 
+# day 2 -- all remote jobs
 # 263 pages for internships
+# link for internships in 100 mile radius of crestline and fullerton: https://ucla.joinhandshake.com/job-search/10862774?page=1&per_page=25
+
 # link for just paid internships: https://ucla.joinhandshake.com/job-search/10812441?jobType=3&pay%5BsalaryType%5D=1&per_page=25&page=1
 # link for just jobs https://ucla.joinhandshake.com/job-search/10799122?jobType=9&per_page=25&page=1
  
@@ -41,7 +44,7 @@ def check_login(driver):
 
 def load_page(driver, page):
     """Load a specific page of job search results."""
-    driver.execute_script(f"window.location.href='https://ucla.joinhandshake.com/job-search/10799122?jobType=9&per_page=25&page={page}'")
+    driver.execute_script(f"window.location.href='https://ucla.joinhandshake.com/job-search/10862774?page={page}&per_page=25'")
     time.sleep(random.uniform(1, 3))
 
 def get_job_cards(driver, wait):
@@ -189,6 +192,8 @@ def save_handshake_jobs():
                     print(f"Error with job {i + 1}: {e}")
 
             print(f"page {page} has been scanned")
+            with open("progress.log", "a") as log:
+                log.write(f"page {page} has been scanned\n")
             page += 1
 
         print("\nFinished scanning all pages.")

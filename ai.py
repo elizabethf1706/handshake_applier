@@ -1,6 +1,8 @@
 from openai import OpenAI, RateLimitError
 import os
 import time 
+from dotenv import load_dotenv
+load_dotenv()
 def ai_evaluate_job(title, description):
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
@@ -41,7 +43,7 @@ def ai_evaluate_job(title, description):
         HARD REJECTION RULES (IF ANY MATCH → ANSWER "no")
         ------------------------
         Reject the job if:
-        - It is primarily in sales, marketing, recruiting, tutoring, content creation, or customer service
+        - It is primarily in sales, marketing, behavorial therapy,recruiting, tutoring, content creation, or customer service
         - It requires bilingual ability
         - It requires 2+ years of experience (EXCEPTION: ranges like "0–4 years" are OK)
         - It requires:
