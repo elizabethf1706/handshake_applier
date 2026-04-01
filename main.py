@@ -54,7 +54,7 @@ def ai_evaluate_job(title, description):
         HARD REJECTION RULES (IF ANY MATCH → ANSWER "no")
         ------------------------
         Reject the job if:
-        - It is primarily in sales, marketing, recruiting, or customer service
+        - It is primarily in sales, marketing, recruiting, tutoring, content creation, or customer service
         - It requires bilingual ability
         - It requires 2+ years of experience (EXCEPTION: ranges like "0–4 years" are OK)
         - It requires:
@@ -70,7 +70,7 @@ def ai_evaluate_job(title, description):
         ------------------------
         - Jobs open to graduate students → ACCEPT
         - Jobs requiring "in school" or "recent graduate" → ACCEPT
-        - Jobs accepting related fields → ACCEPT
+        - Jobs accepting related fields to cs or linguistics → ACCEPT
         - Internships and entry-level roles → STRONGLY PREFERRED
 
         ------------------------
@@ -119,17 +119,25 @@ def save_handshake_jobs():
     )
     internship_limit = 231
     job_limit = 1000
-    wait = WebDriverWait(driver, 2)
+    wait = WebDriverWait(driver, 12)
     page = 1
 
-    time.sleep(random.uniform(3, 6))
+ 
     while page < job_limit:
     # open handshake search
      # driver.execute_script(f"window.location.href='https://ucla.joinhandshake.com/job-search/10812441?jobType=3&pay%5BsalaryType%5D=1&per_page=25&page={}'") 
      # driver.execute_script(f"window.location.href='https://ucla.joinhandshake.com/job-search/10799122?jobType=9&per_page=25&page={}'")
      
         driver.execute_script(f"window.location.href='https://ucla.joinhandshake.com/job-search/10799122?jobType=9&per_page=25&page={page}'")
-        time.sleep(random.uniform(3, 5))
+        time.sleep(random.uniform(1, 3))
+
+        # Check if login is required
+        try:
+            login_indicator = driver.find_element(By.XPATH, "//input[@type='email'] | //button[contains(text(),'Log in')] | //a[contains(text(),'Sign in')]")
+            print("Login required. Please log in manually in the browser window.")
+            input("Press Enter after logging in to continue...")
+        except Exception:
+            pass  # Assume logged in
 
         # scroll so all jobs load
         driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
@@ -150,13 +158,40 @@ def save_handshake_jobs():
 
                 # scroll into view
                 driver.execute_script("arguments[0].scrollIntoView();", job)
-                time.sleep(random.uniform(3, 10))
+                time.sleep(random.uniform(1,3))
 
-                # click the job card
-                job.click()
+                # click the job card - try clicking the anchor link inside instead of the div
+                try:
+                    # Find the clickable anchor link inside the job card
+                    job_link = job.find_element(By.XPATH, ".//a[@role='button']")
+                    driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", job_link)
+                    time.sleep(0.5)
+                    job_link.click()
+                except:
+                    # Fallback: use JavaScript to click the job card
+                    driver.execute_script("arguments[0].click();", job)
+                
                 print("Opened job", i+1)
-
-                time.sleep(random.uniform(3, 5))
+                
+                try:
+                    # Click the "More" button using the view-more-button class
+                    more_button = WebDriverWait(driver, 3).until(
+                        EC.element_to_be_clickable(
+                            (By.XPATH, "//button[contains(@class, 'view-more-button')]")
+                        )
+                    )
+                    driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", more_button)
+                    print("Found 'More' button, attempting click...")
+                    try:
+                        more_button.click()
+                    except:
+                        driver.execute_script("arguments[0].click();", more_button)
+                    time.sleep(1)
+                    print("More button clicked successfully")
+                except Exception as expand_e:
+                    print(f"Could not find/click more button: {expand_e}")
+           
+ 
 
                 # gather job title and description
                 title = ""
@@ -189,7 +224,7 @@ def save_handshake_jobs():
                 else:
                     print("AI says not worth saving")
 
-                time.sleep(random.uniform(3, 5))
+                time.sleep(random.uniform(1,3))
 
             except Exception as e:
                 print("Error with job", i+1, e)
