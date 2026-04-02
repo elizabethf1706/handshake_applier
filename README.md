@@ -7,3 +7,7 @@ that you can copy paste into this code. The only change you need to make is to t
 I usually run it to do ALL remote jobs and internships,
 then a new link for jobs within a 100 mile radius of my hometown
 then internships within a 100 mile radius of my hometown.
+
+for running this you will probably have to download a few packages manually as I dont have a simple requirements folder to just pip install. it runs even if u toggle outside the chrome tab - i use microsoft edge, so im not sure if using chhrome in the same browser but in a new tab would affect operations.
+Occasionally my computer might turn off or stop the code over time, if this happens make sure to change page = 1 setting on the main funciton to whatever page it 
+left off at, so it can start at the place it left off at rather than the beginning. The page it left off at gets logged in a file you can view.
