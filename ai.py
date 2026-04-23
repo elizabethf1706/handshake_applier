@@ -36,7 +36,6 @@ def ai_evaluate_job(title, description):
         - do not reject based off skills, tooling, or experiences that they want to see - only reject if they want 2+ year os of experience in work roles.
         If you feel the role suits the users resume very well and might not fit speicifc experience requirements or tooling accept anyways.
         users resume:Elizabeth Flynn
-714-770-1898 | elizabethflynn223@gmail.com | | github.com/elizabethf1706 | https://www.linkedin.com/in/elizabeth-flynn2/
 Recent UCLA graduate with 1 year of software development experience, located in southern California, working full time
 while working on a masters.
 Education
