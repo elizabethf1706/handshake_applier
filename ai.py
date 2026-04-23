@@ -3,40 +3,7 @@ import os
 import time 
 from dotenv import load_dotenv
 load_dotenv()
-def ai_evaluate_job(title, description):
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        raise RuntimeError("OPENAI_API_KEY environment variable not set")
-
-    client = OpenAI(api_key=api_key)
-    prompt = f"""
-        You are given a job title and description from a job board.
-
-        Your task: Decide whether the job or internship is worth saving for the user. User is open to any field besides the ones listed in the hard rejects.
-        - Ignore ALL requirements when considering rejection, unless it specifically states a hard requirement in which you must have at least 2 years of experience in a work role, in which case apply the hard reject rule about work experience.
-        Respond with ONLY:
-        - "yes" if the job should be saved
-        - "no: <brief reason>" if it should NOT be saved "
-
-        ------------------------
-        USER PROFILE
-        ------------------------
-        - Recently Completed Bachelor's in Computer Science and Linguistics (UCLA) Dec 2025, Current masters student in Electrical Engineering-and Computer Science
-        - Currently pursuing a Master's in Computer Science, enrolled in school currently.
-        - 1 year of software development experience
-        - Skills: Python, JavaScript, AI, LLMs, agents 
-        - DO NOT reject if its not in a tech field, but if it is in a tech field, it should be relevant to the user's skills and experience. For example, if the role is in IT support but requires Python scripting, do not reject. If the role is in software engineering but requires Java and the user has no experience with Java, do not reject but say "no: requires Java experience" because it is not relevant to the user's skills and experience.
-        - User wants to work in any field, but is primarily interested in software engineering, AI research, product management, and data science roles. User is open to internships and full time roles. User is open to working in any industry (e.g. finance, healthcare, education) as long as the role is not in a hard reject field.
-        When considering degrees an example of what to accept for is "Currently pursuing a Bachelor’s or Master’s degree in Computer Science, Information Systems, Engineering, or a related field."
-        (do not reject if it is for "students and recent graduates", "must be enrolled in a 4 year institution", or "enrolled students")
-        (if role is labeled in a tech field or position such as IT support, or Application Engineering or white collar job and has some sales, support tasks do not reject).
-        Only reject for the sales and marketing field if it is primarily in sales and marketing (e.g. "sales internship" or "marketing internship" or "sales associate" or "marketing associate" or "sales representative" or "marketing representative" or "sales manager" or "marketing manager" or "business development" or "account executive" or "customer success manager" or "customer service representative" or "retail associate"). If the role is in a tech field and seems like it would give me meaningful experience 
-        but has some sales, support, customer service, or marketing tasks, do not reject.
-        - do not reject roles if it asks for a degree in engineering or a related field
-        - do not reject based off skills, tooling, or experiences that they want to see - only reject if they want 2+ year os of experience in work roles.
-        If you feel the role suits the users resume very well and might not fit speicifc experience requirements or tooling accept anyways.
-        users resume:Elizabeth Flynn
-Recent UCLA graduate with 1 year of software development experience, located in southern California, working full time
+resume = """Recent UCLA graduate with 1 year of software development experience, located in southern California, working full time
 while working on a masters.
 Education
 University of California, Los Angeles (UCLA) Los Angeles, CA
@@ -94,27 +61,71 @@ conversation suggestions using Groq, Gemini, and LLaMA APIs.
 • Implemented backend processing to handle user data, resumes, and live transcripts for identity recognition and
 dynamic response generation.
 • Integrated Snap Spectacles with backend via HTTP POST requests for real-time audio streaming and transcription.
-Technical Skills
 Python, JavaScript, HTML, CSS, React, Node.js, Flask, Streamlit, MongoDB, REST APIs, Git, GitHub, VS Code,
-Terraform, WordPress, LLMs, Generative AI, NLP, RAG, OpenAI, Groq, Google Sheets, Tableau, AI/ML, Selenium,
+technical skills:Terraform, WordPress, LLMs, Generative AI, NLP, RAG, OpenAI, Groq, Google Sheets, Tableau, AI/ML, Selenium,
 Monday.com, Webscraping, AWS
-        ------------------------
-        HARD REJECTION RULES
-        ---------------------
-        - Reject if it is primarily in sales, marketing, behavorial therapy, tutoring, teaching, content creation, customer service, or retail
-        - Reject if it requires bilingual ability (if bilinigual ability is a "plus" but not a requirement, do not reject)
-        - Reject if it requires 2+ years of work experience (EXCEPTION: ranges like "0–4 years" are OK)
-        - Reject if it requires Law school, Paralegal certification, a Medical degree, a PhD
-        - Reject if the position requires applicants to have a degree unrelated to computer science, linguistics, or engineering without leniency (e.g. "degree in any field is accepted" or "stem degrees" or "looking for math or related degree" do not reject for, but "degree in nursing, arts, social work, education, business, architecture is required" is a reject)
-        - Reject if the role clearly specifies it only wants freshmen, sophomores, juniors, or seniors, and does not say that recent graduates or masters can also apply.
-        - Reject if it only wants or specifies a specific year in school such as freshman, sophmore, junior and senior AND does not say that "recent graduates", "current students enrolled in a masters or 4 year institution" or "masters students" can also apply
-        ------------------1111------
-        FINAL INSTRUCTION
-        ------------------------
-        Evaluate strictly using the rules above.
-        If ANY rejection rule applies → answer "no".
-        Otherwise → answer "yes".
+"""
+def ai_evaluate_job(title, description):
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise RuntimeError("OPENAI_API_KEY environment variable not set")
 
+    client = OpenAI(api_key=api_key)
+    prompt = f"""
+    You must follow this EXACT decision process:
+        You are given a job title and description from a job board. please read the prompt fully before making a decision
+
+        Your task: Decide whether the job or internship is worth saving for the user. User is open to any field besides the ones listed in the hard rejects.
+        - Ignore ALL requirements when considering rejection, unless it specifically states a hard requirement in which you must have at least 2 years of experience in a work role, in which case apply the hard reject rule about work experience.
+        Respond with ONLY:
+        - "yes" if the job should be saved
+        - "no: <clear reason from HARD RULES ONLY>"
+STEP 1: Check HARD REJECTION rules ONLY
+- Reject ONLY if:
+  1. The job is PRIMARILY a sales, marketing, customer service, or retail role.  
+  2. The job EXPLICITLY requires 2+ years of work experience (must be clearly stated, do NOT assume)
+  3. The job EXPLICITLY requires a degree the user does NOT have, and does not specify that unrelated majors or similar majors can apply (NOT engineering, CS, Lingustics, Information Systems/Technology, or related)
+  4. The job REQUIRES bilingual ability
+  5. The job REQUIRES a PhD, JD, MD, or Paralegal certification. 
+  6. The job only wants or specifies a specific year in school that the user is not a part of such as freshman, sophmore, junior and senior, AND does not say that "recent graduates", "current students enrolled in a masters or 4 year institution" or "masters students" can also apply
+        - If it says a specific year but also says recent graduates or masters students can apply, do NOT reject.
+        - If it says currently enrolled student, masters student, enrolled in a 4 year institution, or recent gradute, user falls into that role and should not reject.
+
+
+IMPORTANT:
+- Do NOT infer or assume requirements
+- Do NOT treat "preferred" as required
+- Do NOT assume a Bachelor's degree = experience requirement
+
+STEP 2: If NONE of the above apply → ACCEPT
+
+STEP 3: Ignore the following when deciding:
+- Skills (languages, tools, frameworks)
+- Years of experience UNLESS explicitly stated as required
+- Industry (tech vs non-tech)
+- Tasks like customer interaction IF the role is technical or white-collar or relevant to user. For example, IT support is fine to accept.
+
+STEP 4: Special clarification rules:
+- IT, Software Dev, Engineering, Analyst, or Technical roles are ALWAYS acceptable even if they include support or customer interaction
+- If the role is ambiguous → default to YES
+
+
+        NOTES
+        --------
+        - DO NOT reject based off the field the position it is in, only reject if the position is not somethng we would likely qualify for. For example a software developer in the film field we should NOT REJECT for.
+        - Do not reject based off of specific skills, tools, or experiences except if it speciically states we require 2+ years in a language or tooling.  
+        For example, If the role is in software engineering but requires Java and the user doesnt have it, dont reject. But if role is sofware engineering and calls for 2+ years of java, reject.
+        When considering degrees an example of what to accept for is "Currently pursuing a Bachelor’s or Master’s degree in Computer Science, Information Systems, Engineering, or a related field."
+        (do not reject if it is for "students and recent graduates", "must be enrolled in a 4 year institution", or "enrolled students")
+        (if role is labeled in a tech field or position such as IT support, or Application Engineering or white collar job and has some sales, support tasks do not reject).
+        - If you feel the role suits the users resume very well and does not fit specific experience requirements or tooling, override to accept anyways.
+
+        ------------------------
+        USER PROFILE
+        ------------------------
+        - Recently Completed Bachelor's in Computer Science and Linguistics (UCLA) Dec 2025, Current masters student in Electrical Engineering-and Computer Science
+        - 1 year of software development experience
+       -        users resume: {resume}
         ------------------------
         INPUT
         ------------------------
