@@ -13,11 +13,14 @@ from ai import ai_evaluate_job
 # day 2 -- all remote jobs
 # 263 pages for internships
 # link for internships in 100 mile radius of crestline and fullerton: https://ucla.joinhandshake.com/job-search/10862774?page=1&per_page=25
-
+# link for jobs in 100 mile radius of crestline and fullerton: https://ucla.joinhandshake.com/job-search/10898693?jobType=9&per_page=25&locationFilter=%7B%22label%22%3A%22Los+Angeles%2C+CA%22%2C%22point%22%3A%2234.0522342%2C-118.2436849%22%2C%22type%22%3A%22place%22%2C%22id%22%3A%2295796441%22%2C%22distance%22%3A%22100mi%22%7D&locationFilter=%7B%22label%22%3A%22Orange%2C+California%2C+United+States+of+America%22%2C%22point%22%3A%2233.787257%2C-117.850309%22%2C%22type%22%3A%22place%22%2C%22id%22%3A%22147308053%22%2C%22distance%22%3A%22100mi%22%7D&locationFilter=%7B%22label%22%3A%22Costa+Mesa%2C+California%2C+United+States%22%2C%22point%22%3A%2233.663871%2C-117.904768%22%2C%22type%22%3A%22place%22%2C%22id%22%3A%22171271576%22%2C%22distance%22%3A%22100mi%22%7D&locationFilter=%7B%22label%22%3A%22San+Diego%2C+California%2C+United+States%22%2C%22point%22%3A%2232.713623%2C-117.16016%22%2C%22type%22%3A%22place%22%2C%22id%22%3A%22171271579%22%2C%22distance%22%3A%22100mi%22%7D&locationFilter=%7B%22id%22%3A%22place.75450604%22%2C%22label%22%3A%22Crestline%2C+California%2C+United+States%22%2C%22type%22%3A%22place%22%2C%22point%22%3A%2234.237986%2C-117.291357%22%2C%22text%22%3A%22Crestline%22%2C%22distance%22%3A%22100mi%22%7D&page=1
 # link for just paid internships: https://ucla.joinhandshake.com/job-search/10812441?jobType=3&pay%5BsalaryType%5D=1&per_page=25&page=1
 # link for just jobs https://ucla.joinhandshake.com/job-search/10799122?jobType=9&per_page=25&page=1
  
-
+# as of 4/23/2026: today, running query for internships within 100 miles of fullerton, la and crestline that are paid.
+# next -> remote internships
+# next -> remote jobs
+# next -> job in la/oc/crestlne
 # works as intended i believe?
 def setup_driver():
     """Set up and return Chrome driver with options."""
@@ -44,8 +47,8 @@ def check_login(driver):
 
 def load_page(driver, page):
     """Load a specific page of job search results."""
-    driver.execute_script(f"window.location.href='https://ucla.joinhandshake.com/job-search/10862774?page={page}&per_page=25'")
-    time.sleep(random.uniform(1, 3))
+    driver.execute_script(f"window.location.href='https://ucla.joinhandshake.com/job-search/10971770?pay%5BsalaryType%5D=1&pay%5BpaySchedule%5D=ANNUAL_SALARY&per_page=25&jobType=3&sort=relevance&locationFilter=%7B%22label%22%3A%22Fullerton%2C+California%2C+United+States%22%2C%22point%22%3A%2233.870348%2C-117.924312%22%2C%22type%22%3A%22place%22%2C%22id%22%3A%22171271577%22%2C%22distance%22%3A%22100mi%22%7D&locationFilter=%7B%22id%22%3A%22place.75450604%22%2C%22label%22%3A%22Crestline%2C+California%2C+United+States%22%2C%22type%22%3A%22place%22%2C%22point%22%3A%2234.237986%2C-117.291357%22%2C%22text%22%3A%22Crestline%22%2C%22distance%22%3A%22100mi%22%7D&locationFilter=%7B%22id%22%3A%22place.192407788%22%2C%22label%22%3A%22Los+Angeles%2C+California%2C+United+States%22%2C%22type%22%3A%22place%22%2C%22point%22%3A%2234.048051%2C-118.254187%22%2C%22text%22%3A%22Los+Angeles%22%2C%22distance%22%3A%22100mi%22%7D&page={page}'")
+    time.sleep(random.uniform(1,2))
 
 def get_job_cards(driver, wait):
     """Scroll to load all jobs and return job cards."""
@@ -137,7 +140,7 @@ def save_job_if_worth(driver, title, description):
     print(f"Job description: {description}")
 
     # send to AI to determine whether to save
-    worth_saving = ai_evaluate_job(title, description)
+    worth_saving, ai_answer = ai_evaluate_job(title, description)
 
     if worth_saving:
         try:
@@ -147,7 +150,8 @@ def save_job_if_worth(driver, title, description):
         except Exception as save_e:
             print("Could not click Save button:", save_e)
     else:
-        print("AI says not worth saving")
+        reason = ai_answer[len("no:"):].strip() if ai_answer.startswith("no:") else "no reason given"
+        print(f"AI rejected: {reason}")
 
 
 
@@ -184,6 +188,19 @@ def save_handshake_jobs():
                         (By.XPATH, "//h1 | //h2[@data-hook='job-title']")
                     ))
                     print(f"Opened job {i + 1}")
+                    # Skip jobs that are already saved or already applied to
+                    try:
+                        driver.find_element(By.XPATH, "//button[.//span[text()='Saved']]")
+                        print("Already saved, skipping")
+                        continue
+                    except Exception:
+                        pass
+                    try:
+                        driver.find_element(By.XPATH, "//*[contains(text(),'Applied on')] | //button[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'withdraw application')]")
+                        print("Already applied, skipping")
+                        continue
+                    except Exception:
+                        pass
                     expand_description(driver)
                     title, description = extract_job_details(driver)
                     save_job_if_worth(driver, title, description)
